@@ -167,6 +167,36 @@ set (BUILD_TESTING OFF)
 # For now, let's enable all the tests.
 enable_testing()
 
+# Define a C++ executable that links against the shared open_spiel library.
+# Convenience macro to replace the common pattern
+#
+#     add_executable(my_exe my_exe.cc ${OPEN_SPIEL_OBJECTS})
+#
+# with
+#     add_open_spiel_executable(my_exe my_exe.cc)
+#
+macro(add_open_spiel_executable)
+  set(ARGS ${ARGV})
+  list(GET ARGS 0 EXE_NAME)
+  add_executable(${ARGV})
+  target_link_libraries("${EXE_NAME}" open_spiel)
+endmacro()
+
+# Define a C++ executable and register it as a test.
+# Convenience macro to replace the common pattern
+#
+#     add_executable(my_exe my_exe.cc ${OPEN_SPIEL_OBJECTS})
+#     add_test(my_exe my_exe)
+#
+# with
+#     add_open_spiel_test(my_exe my_exe.cc)
+macro(add_open_spiel_test)
+  set(ARGS ${ARGV})
+  list(GET ARGS 0 EXE_NAME)
+  add_open_spiel_executable(${ARGV})
+  add_test("${EXE_NAME}" "${EXE_NAME}")
+endmacro()
+
 set (OPEN_SPIEL_CORE_FILES
   action_view.h
   action_view.cc
@@ -330,29 +360,20 @@ if (OPEN_SPIEL_BUILD_WITH_JULIA)
   add_subdirectory (julia)
 endif()
 
-# Build a shared library, i.e. libopen_spiel.so. We generally only enable this
-# for binary releases.
+# Build a shared library, i.e. libopen_spiel.so. Used for tests and
+# binary releases.
 # Note that there are known problems when trying to use absl::flags within a
 # shared library, hence is intentionally left out. To use ABSL flags, link with
 # absl::flags and absl::flags_parse separately.
-set (BUILD_SHARED_LIB OFF CACHE BOOL "Build a shared library?")
-if(NOT DEFINED ENV{BUILD_SHARED_LIB})
-  set (ENV{BUILD_SHARED_LIB} OFF)
+add_library(open_spiel SHARED ${OPEN_SPIEL_OBJECTS})
+if (OPEN_SPIEL_BUILD_WITH_ORTOOLS)
+  # Optionally include files that use external dependencies, for example
+  # linear program specification for finding Nash equilibria.
+  target_link_libraries(open_spiel PUBLIC $<TARGET_OBJECTS:open_spiel_ortools>)
 endif()
-set (BUILD_SHARED_LIB $ENV{BUILD_SHARED_LIB})
-if (BUILD_SHARED_LIB)
-  if (OPEN_SPIEL_BUILD_WITH_ORTOOLS)
-    add_library(open_spiel SHARED ${OPEN_SPIEL_OBJECTS}
-      # Optionally include files that use external dependencies, for example
-      # linear program specification for finding Nash equilibria.
-      $<TARGET_OBJECTS:open_spiel_ortools>
-    )
-  else()
-    add_library(open_spiel SHARED ${OPEN_SPIEL_OBJECTS})
-  endif()
-  target_include_directories(open_spiel PUBLIC
-      ${CMAKE_CURRENT_SOURCE_DIR} abseil-cpp)
-  target_link_libraries(open_spiel PUBLIC
+target_include_directories(open_spiel PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR} abseil-cpp)
+target_link_libraries(open_spiel PUBLIC
     absl::algorithm
     absl::flat_hash_map
     absl::optional
@@ -363,7 +384,6 @@ if (BUILD_SHARED_LIB)
     # Optionally link external dependencies, for example OrTools for solving
     # linear programs.
     ${ORTOOLS_LIBS}
-  )
-endif()
+)
 
 add_subdirectory (tests)
