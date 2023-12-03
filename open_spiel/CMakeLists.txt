@@ -235,17 +235,19 @@ include_directories (abseil-cpp)
 add_library(open_spiel_core OBJECT ${OPEN_SPIEL_CORE_FILES})
 target_include_directories (
   open_spiel_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} abseil-cpp)
-link_libraries(open_spiel_core
-  absl::algorithm
-  absl::flags
-  absl::flags_parse
-  absl::flat_hash_map
-  absl::optional
-  absl::random_random
-  absl::str_format
-  absl::strings
-  absl::time
+target_link_libraries(open_spiel_core
+  INTERFACE
+    absl::algorithm
+    absl::flags
+    absl::flags_parse
+    absl::flat_hash_map
+    absl::optional
+    absl::random_random
+    absl::str_format
+    absl::strings
+    absl::time
 )
+link_libraries(open_spiel_core)
 
 # Just the minimal base library: no games.
 set (OPEN_SPIEL_CORE_OBJECTS $<TARGET_OBJECTS:open_spiel_core>)
@@ -373,7 +375,8 @@ if (OPEN_SPIEL_BUILD_WITH_ORTOOLS)
 endif()
 target_include_directories(open_spiel PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR} abseil-cpp)
-target_link_libraries(open_spiel PUBLIC
+target_link_libraries(open_spiel
+  INTERFACE
     absl::algorithm
     absl::flat_hash_map
     absl::optional
